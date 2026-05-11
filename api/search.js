@@ -5,20 +5,32 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Query is required" });
     }
 
-    const activeInstance = "https://searx.be/search"; 
-    const targetUrl = `${activeInstance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+    // Eine Liste verschiedener Instanzen. Wenn eine blockt, wird die nächste probiert.
+    const instances = [
+        "https://paulgo.io/search",
+        "https://searx.be/search",
+        "https://searx.work/search",
+        "https://search.ononoki.org/search",
+        "https://priv.au/search"
+    ];
 
-    try {
-        const response = await fetch(targetUrl);
-        
-        if (!response.ok) {
-            throw new Error(`SearX API responded with status: ${response.status}`);
+    for (let instance of instances) {
+        const targetUrl = `${instance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+
+        try {
+            const response = await fetch(targetUrl);
+            
+            // Wenn die Instanz erfolgreich antwortet (Status 200)
+            if (response.ok) {
+                const data = await response.json();
+                return res.status(200).json(data); // Daten ans Frontend senden und abbrechen
+            }
+            console.log(`${instance} responded with ${response.status}. Trying next...`);
+        } catch (error) {
+            console.log(`Connection to ${instance} failed. Trying next...`);
         }
-
-        const data = await response.json();
-        res.status(200).json(data);
-    } catch (error) {
-        console.error("Backend Fetch Error:", error);
-        res.status(500).json({ error: "Failed to fetch from the Void." });
     }
+
+    // Wenn ALLE Instanzen in der Liste fehlgeschlagen sind
+    return res.status(500).json({ error: "ALL_NODES_OFFLINE" });
 }
