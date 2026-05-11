@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEURAL VOID // THE UNCHAINED WEB</title>
     <style>
+        /* ============ DESIGN SYSTEM ============ */
         :root {
             --bg: #000000;
-            --neon: #00FF41;
+            --neon: #00FF41; /* Matrix Green */
             --neon-dim: #003b0f;
             --violet: #b026ff;
+            --violet-glow: rgba(176, 38, 255, 0.6);
             --text: #cfeacf;
             --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
         }
@@ -25,59 +27,87 @@
             cursor: crosshair;
         }
 
-        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.4; }
-        .crt-overlay { pointer-events: none; position: fixed; inset: 0; z-index: 999; background: repeating-linear-gradient(rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 2px, transparent 2px); background-size: 100% 3px; }
-        .vignette { pointer-events: none; position: fixed; inset: 0; z-index: 998; background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%); }
+        /* ============ BACKGROUND & OVERLAYS ============ */
+        #matrix-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; opacity: 0.4;
+        }
 
-        main { max-width: 1000px; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        .crt-overlay {
+            pointer-events: none; position: fixed; inset: 0; z-index: 999;
+            background: repeating-linear-gradient(rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 2px, transparent 2px);
+            background-size: 100% 3px;
+        }
+
+        .vignette {
+            pointer-events: none; position: fixed; inset: 0; z-index: 998;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+        }
+
+        /* ============ UI COMPONENTS ============ */
+        main {
+            max-width: 1000px; margin: 0 auto; padding: 40px 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
         header { width: 100%; display: flex; justify-content: space-between; font-size: 10px; color: var(--neon-dim); border-bottom: 1px solid var(--neon-dim); padding-bottom: 5px; margin-bottom: 50px; }
 
-        .logo { font-size: clamp(2.5rem, 8vw, 5rem); font-weight: 900; letter-spacing: 0.2em; color: var(--neon); text-shadow: 0 0 10px var(--neon); position: relative; margin-bottom: 10px; text-transform: uppercase; }
-        .logo .v { color: var(--violet); }
-        .tagline { font-size: 12px; color: var(--violet); letter-spacing: 0.3em; margin-bottom: 40px; min-height: 1.5em; text-transform: uppercase; }
+        .logo {
+            font-size: clamp(2.5rem, 8vw, 5rem); font-weight: 900; letter-spacing: 0.2em;
+            color: var(--neon); text-shadow: 0 0 10px var(--neon);
+            position: relative; margin-bottom: 10px;
+        }
 
+        .tagline { font-size: 14px; color: var(--violet); letter-spacing: 0.3em; margin-bottom: 40px; min-height: 1.5em; }
+
+        /* SEARCH AREA */
         .search-container { width: 100%; max-width: 700px; position: relative; }
-        .search-bar-wrap { position: relative; border: 1px solid var(--neon); background: rgba(0, 20, 0, 0.8); display: flex; align-items: center; padding: 5px; }
-        .search-bar { width: 100%; background: transparent; border: none; padding: 10px 15px; color: var(--neon); font-family: var(--font-mono); font-size: 18px; outline: none; }
-        .search-btn { background: var(--neon); border: none; color: black; padding: 10px 20px; font-weight: bold; cursor: pointer; font-family: var(--font-mono); transition: 0.2s; }
-        .search-btn:hover { background: white; box-shadow: 0 0 15px var(--neon); }
+        
+        .search-bar {
+            width: 100%; background: rgba(0, 20, 0, 0.8); border: 1px solid var(--neon);
+            padding: 15px 20px; color: var(--neon); font-family: var(--font-mono);
+            font-size: 18px; outline: none; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
 
-        .tabs { display: flex; gap: 10px; margin-top: 15px; justify-content: center; flex-wrap: wrap; }
-        .tab-btn { background: transparent; border: 1px solid var(--neon-dim); color: var(--neon-dim); padding: 6px 12px; font-size: 11px; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-family: var(--font-mono); }
+        .tabs { display: flex; gap: 15px; margin-top: 15px; justify-content: center; }
+        .tab-btn {
+            background: transparent; border: 1px solid var(--neon-dim); color: var(--neon-dim);
+            padding: 5px 15px; font-size: 12px; cursor: pointer; transition: 0.3s;
+        }
         .tab-btn.active { border-color: var(--violet); color: var(--violet); box-shadow: 0 0 8px var(--violet); }
         .tab-btn:hover { border-color: var(--neon); color: var(--neon); }
 
-        #results-area { width: 100%; margin-top: 40px; }
-        .log-box { font-size: 11px; color: var(--neon); margin-bottom: 20px; border-left: 2px solid var(--neon); padding-left: 10px; line-height: 1.6; display: none; background: rgba(0,20,0,0.3); padding: 10px; }
-
-        /* Results Display */
-        .result-item { margin-bottom: 25px; padding: 15px; border: 1px solid rgba(0, 255, 65, 0.1); background: rgba(0,10,0,0.5); transition: 0.2s; }
-        .result-item:hover { border-color: var(--neon); transform: translateX(5px); }
-        .result-item a { color: var(--neon); font-size: 18px; text-decoration: none; display: block; margin-bottom: 5px; font-weight: bold; }
-        .result-item cite { color: var(--violet); font-size: 10px; font-style: normal; word-break: break-all; }
-        .result-item p { color: #aaa; font-size: 13px; margin-top: 8px; }
+        /* RESULTS */
+        #results-area { width: 100%; margin-top: 50px; }
+        .decrypt-log { font-size: 12px; color: var(--neon); margin-bottom: 20px; border-left: 2px solid var(--neon); padding-left: 10px; display: none; }
+        
+        /* Web View */
+        .result-item { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(0, 255, 65, 0.1); }
+        .result-item a { color: var(--neon); font-size: 18px; text-decoration: none; display: block; margin-bottom: 5px; }
+        .result-item cite { color: var(--violet); font-size: 11px; font-style: normal; }
+        .result-item p { color: #888; font-size: 14px; margin-top: 5px; }
 
         /* Image Grid */
-        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .image-card { background: #050505; border: 1px solid var(--neon-dim); position: relative; overflow: hidden; aspect-ratio: 1; transition: 0.3s; cursor: pointer; }
-        .image-card:hover { border-color: var(--neon); transform: scale(1.03); z-index: 2; box-shadow: 0 0 20px rgba(0,255,65,0.3); }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .image-card { background: #111; border: 1px solid var(--neon-dim); overflow: hidden; height: 180px; transition: 0.3s; cursor: pointer; }
+        .image-card:hover { border-color: var(--neon); transform: scale(1.02); }
         .image-card img { width: 100%; height: 100%; object-fit: cover; }
-        .image-card .img-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: var(--neon); font-size: 9px; padding: 5px; transform: translateY(100%); transition: 0.3s; }
-        .image-card:hover .img-info { transform: translateY(0); }
 
-        .glitch { animation: glitch-anim 0.2s linear infinite; }
-        @keyframes glitch-anim { 
-            0% { transform: translate(0); } 
-            20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); } 
-            40% { transform: translate(-2px, -2px); } 
-            60% { transform: translate(2px, 2px); filter: hue-rotate(-90deg); } 
-            80% { transform: translate(2px, -2px); } 
-            100% { transform: translate(0); } 
+        /* GLITCH ANIMATION */
+        .glitch { animation: glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite; }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
         }
 
-        .loading-bar { width: 100%; height: 2px; background: var(--neon-dim); margin-top: 10px; overflow: hidden; position: relative; display: none; }
-        .loading-bar::after { content: ''; position: absolute; left: -50%; width: 50%; height: 100%; background: var(--neon); animation: loading 1.5s infinite; }
-        @keyframes loading { from { left: -50%; } to { left: 100%; } }
+        @media (max-width: 600px) {
+            .tabs { flex-wrap: wrap; }
+            .image-grid { grid-template-columns: repeat(2, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -88,187 +118,168 @@
 
 <main>
     <header>
-        <span>LINK_STATUS: ENCRYPTED // PORT_441</span>
+        <span>STATUS: ENCRYPTED // NODE_441</span>
         <span id="utc-clock">00:00:00 UTC</span>
     </header>
 
-    <h1 class="logo" id="main-logo">NEURAL<span class="v">_</span>VOID</h1>
-    <div class="tagline" id="tagline-box"></div>
+    <h1 class="logo" id="main-logo">NEURAL VOID</h1>
+    <div class="tagline" id="typing-tagline"></div>
 
     <div class="search-container">
         <form id="search-form">
-            <div class="search-bar-wrap">
-                <input type="text" id="query-input" class="search-bar" placeholder="SEARCH THE VOID..." autocomplete="off">
-                <button type="submit" class="search-btn">EXEC</button>
-            </div>
+            <input type="text" id="query-input" class="search-bar" placeholder="Enter query..." autocomplete="off">
             <div class="tabs">
                 <button type="button" class="tab-btn active" data-cat="general">WEB</button>
                 <button type="button" class="tab-btn" data-cat="images">IMAGES</button>
                 <button type="button" class="tab-btn" data-cat="videos">VIDEO</button>
                 <button type="button" class="tab-btn" data-cat="news">NEWS</button>
             </div>
-            <div id="loader" class="loading-bar"></div>
         </form>
     </div>
 
     <div id="results-area">
-        <div id="log" class="log-box"></div>
+        <div id="log" class="decrypt-log"></div>
         <div id="display"></div>
     </div>
 </main>
 
 <script>
-    const PROXY_LIST = [
-        "https://api.codetabs.com/v1/proxy?quest=",
-        "https://api.allorigins.win/get?url="
-    ];
-    const SEARCH_INSTANCES = [
-        "https://searx.work",
-        "https://searx.be",
-        "https://searx.priv.at"
-    ];
+    /* ============ CONFIG ============ */
+    const SEARX_INSTANCE = "https://searx.be/search"; // Kostenlose öffentliche Instanz
     let currentCategory = "general";
 
-    /* MATRIX BACKGROUND */
+    /* ============ MATRIX CANVAS ============ */
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
-    let w, h, columns, drops;
-    function initMatrix() {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
-        columns = w / 20;
-        drops = Array(Math.floor(columns)).fill(1);
-    }
-    initMatrix();
-    window.onresize = initMatrix;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const letters = "01";
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = Array.from({ length: columns }).fill(1);
+
     function drawMatrix() {
         ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-        ctx.fillRect(0, 0, w, h);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00FF41";
-        ctx.font = "15px monospace";
+        ctx.font = fontSize + "px monospace";
         for (let i = 0; i < drops.length; i++) {
-            const text = Math.random() > 0.5 ? "0" : "1";
-            ctx.fillText(text, i * 20, drops[i] * 20);
-            if (drops[i] * 20 > h && Math.random() > 0.975) drops[i] = 0;
+            const text = letters.charAt(Math.floor(Math.random() * letters.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
     setInterval(drawMatrix, 50);
 
-    /* UI EFFECTS */
-    setInterval(() => { document.getElementById('utc-clock').innerText = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
-    const slogans = ["UNCENSORED SEARCH.", "NO FILTERS. NO LOGS.", "ACCESS THE VOID."];
-    let slogIdx = 0;
-    function typeSlogan() {
-        const box = document.getElementById('tagline-box');
-        const txt = slogans[slogIdx % slogans.length];
-        let i = 0; box.innerHTML = "";
-        const timer = setInterval(() => {
-            if (i < txt.length) { box.innerHTML += txt.charAt(i); i++; }
-            else { clearInterval(timer); setTimeout(() => { slogIdx++; typeSlogan(); }, 3000); }
-        }, 100);
-    }
-    typeSlogan();
+    /* ============ UI LOGIC ============ */
+    // Clock
+    setInterval(() => {
+        document.getElementById('utc-clock').innerText = new Date().toLocaleTimeString() + " UTC";
+    }, 1000);
 
+    // Tagline Typing
+    const tagline = "ACCESS THE UNCHAINED WEB. NO FILTERS.";
+    let charIndex = 0;
+    function typeEffect() {
+        if (charIndex < tagline.length) {
+            document.getElementById('typing-tagline').innerHTML += tagline.charAt(charIndex);
+            charIndex++;
+            setTimeout(typeEffect, 100);
+        }
+    }
+    typeEffect();
+
+    // Tab Switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.onclick = () => {
+        btn.addEventListener('click', () => {
             document.querySelector('.tab-btn.active').classList.remove('active');
             btn.classList.add('active');
             currentCategory = btn.dataset.cat;
-        };
+        });
     });
 
-    /* SEARCH LOGIC */
+    /* ============ SEARCH LOGIC ============ */
     const form = document.getElementById('search-form');
+    const display = document.getElementById('display');
+    const log = document.getElementById('log');
+
     form.onsubmit = async (e) => {
         e.preventDefault();
-        const q = document.getElementById('query-input').value.trim();
-        if (!q) return;
+        const query = document.getElementById('query-input').value;
+        if (!query) return;
 
-        const display = document.getElementById('display');
-        const log = document.getElementById('log');
-        const loader = document.getElementById('loader');
-        const logo = document.getElementById('main-logo');
-
+        // Visual Reset
         display.innerHTML = "";
-        log.innerHTML = "> INITIATING NEURAL BYPASS...<br>> STATUS: UNFILTERED_ACCESS_ENABLED<br>";
         log.style.display = "block";
-        loader.style.display = "block";
-        logo.classList.add('glitch');
+        document.getElementById('main-logo').classList.add('glitch');
+        
+        // Decryption Animation
+        log.innerHTML = "> INITIATING BYPASS...<br>";
+        await sleep(400);
+        log.innerHTML += "> TUNNELING THROUGH YANDEX_INDEX...<br>";
+        await sleep(600);
+        log.innerHTML += `> DECRYPTING ${currentCategory.toUpperCase()} STREAM FOR: "${query}"...<br>`;
 
         try {
-            const results = await fetchWithFallbacks(q, currentCategory);
-            renderData(results, currentCategory);
+            const results = await fetchResults(query, currentCategory);
+            renderResults(results, currentCategory);
         } catch (err) {
-            log.innerHTML += "> CRITICAL_FAILURE: ALL_NODES_BLOCKED<br>";
+            log.innerHTML += "> ERROR: VOID_CONNECTION_INTERRUPTED";
         } finally {
-            loader.style.display = "none";
-            logo.classList.remove('glitch');
+            document.getElementById('main-logo').classList.remove('glitch');
         }
     };
 
-    async function fetchWithFallbacks(q, cat) {
-        for (let proxyBase of PROXY_LIST) {
-            for (let instance of SEARCH_INSTANCES) {
-                const target = `${instance}/search?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
-                const finalUrl = proxyBase + encodeURIComponent(target);
-                
-                try {
-                    const resp = await fetch(finalUrl);
-                    if (!resp.ok) continue;
-                    
-                    let data;
-                    if (proxyBase.includes("allorigins")) {
-                        const wrapped = await resp.json();
-                        data = JSON.parse(wrapped.contents);
-                    } else {
-                        data = await resp.json();
-                    }
-                    
-                    if (data && data.results) return data.results;
-                } catch(e) { continue; }
-            }
-        }
-        throw new Error("FAILED_AFTER_ROTATION");
+aasync function fetchResults(q, cat) {
+    const activeInstance = "https://searx.work/search"; 
+    const targetUrl = `${activeInstance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+    
+    // Neuer Proxy: corsproxy.io
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+    try {
+        const resp = await fetch(proxyUrl);
+        if (!resp.ok) throw new Error('NETWORK_RESPONSE_NOT_OK');
+        
+        // corsproxy gibt direkt die Antwort des Zielservers weiter
+        const data = await resp.json(); 
+        
+        return data.results || [];
+    } catch (err) {
+        console.error("Void Error:", err);
+        document.getElementById('log').innerHTML += "> CRITICAL_FAILURE: CONNECTION_REJECTED<br>";
+        return [];
     }
+}
 
-    function renderData(results, cat) {
-        const display = document.getElementById('display');
-        const log = document.getElementById('log');
-        if (!results.length) {
-            display.innerHTML = "<div class='result-item'><h3>[NULL_RESULT]</h3><p>No fragments recovered from the void.</p></div>";
-            return;
-        }
-
-        log.innerHTML += `> DECRYPTED ${results.length} DATA_PACKETS. RENDERING...`;
-
+    function renderResults(data, cat) {
+        log.innerHTML += "> ACCESS GRANTED. DISPLAYING DATA.";
         if (cat === "images") {
             let html = '<div class="image-grid">';
-            results.forEach(item => {
-                const img = item.img_src || item.thumbnail_src || item.thumbnail;
-                if (img) {
-                    html += `
-                    <div class="image-card" onclick="window.open('${item.url}', '_blank')">
-                        <img src="${img}" loading="lazy" onerror="this.parentElement.style.display='none'">
-                        <div class="img-info">${item.title}</div>
-                    </div>`;
+            data.forEach(item => {
+                if (item.img_src) {
+                    html += `<div class="image-card"><img src="${item.img_src}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
                 }
             });
             html += '</div>';
             display.innerHTML = html;
         } else {
             let html = '';
-            results.forEach(item => {
+            data.forEach(item => {
                 html += `
                 <div class="result-item">
                     <a href="${item.url}" target="_blank">${item.title}</a>
                     <cite>${item.url}</cite>
-                    <p>${item.content || 'Data stream corrupted.'}</p>
+                    <p>${item.content || 'No description available.'}</p>
                 </div>`;
             });
             display.innerHTML = html;
         }
     }
+
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 </script>
+
 </body>
 </html>
