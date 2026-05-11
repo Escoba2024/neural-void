@@ -232,20 +232,26 @@
     };
 
 async function fetchResults(q, cat) {
-    const targetUrl = `${SEARX_INSTANCE}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+    // Wir wechseln auf eine stabilere Instanz (du kannst diese bei Bedarf anpassen)
+    const activeInstance = "https://searx.work/search"; 
+    const targetUrl = `${activeInstance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
     
-    // Wir nutzen einen kostenlosen Proxy, um die CORS-Sperre zu umgehen
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    // Neuer Proxy: AllOrigins (stabiler für JSON-Daten)
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
     try {
         const resp = await fetch(proxyUrl);
         if (!resp.ok) throw new Error('NETWORK_RESPONSE_NOT_OK');
-        const data = await resp.json();
-        return data.results;
+        
+        const wrapper = await resp.json();
+        // AllOrigins packt die Daten in ein "contents" Feld als Text
+        const data = JSON.parse(wrapper.contents);
+        
+        return data.results || [];
     } catch (err) {
         console.error("Void Error:", err);
-        // Falls der Proxy mal streikt, versuchen wir es mit einer anderen Instanz
-        log.innerHTML += "> WARNING: PRIMARY_NODE_BLOCKED. ATTEMPTING_RECOVERY...<br>";
+        // Kleiner visueller Hinweis im Log, falls es schiefgeht
+        document.getElementById('log').innerHTML += "> CRITICAL_FAILURE: PROXY_REJECTED_CONNECTION<br>";
         return [];
     }
 }
