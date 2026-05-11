@@ -18,7 +18,8 @@ export default async function handler(req, res) {
                 'X-API-KEY': API_KEY,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ q: q, gl: "de", hl: "de" })
+            // SafeSearch deaktivieren für unzensiertere Ergebnisse!
+            body: JSON.stringify({ q: q, gl: "de", hl: "de", safe: "off" })
         });
 
         if (!response.ok) {
