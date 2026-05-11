@@ -5,37 +5,50 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Query is required" });
     }
 
-    const instances = [
-        "https://paulgo.io/search",
-        "https://searx.be/search",
-        "https://searx.work/search",
-        "https://search.ononoki.org/search",
-        "https://priv.au/search"
-    ];
+    // Wir nutzen die offizielle, offene DuckDuckGo Instant Answer API
+    const targetUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1`;
 
-    for (let instance of instances) {
-        const targetUrl = `${instance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                "User-Agent": "NeuralVoid-Terminal/1.0"
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`DDG API responded with ${response.status}`);
+        }
 
-        try {
-            // Hier ist der Trick: Wir tarnen die Anfrage als echten Browser!
-            const response = await fetch(targetUrl, {
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Referer": "https://www.google.com/"
+        const data = await response.json();
+        const results = [];
+        
+        // Die DDG API liefert die Ergebnisse oft im Array "RelatedTopics"
+        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+            data.RelatedTopics.forEach(topic => {
+                if (topic.FirstURL && topic.Text) {
+                    results.push({
+                        title: topic.Text.split(' - ')[0] || "Neural Link",
+                        url: topic.FirstURL,
+                        content: topic.Text
+                    });
                 }
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                return res.status(200).json(data);
-            }
-            console.log(`${instance} blocked the request with status: ${response.status}`);
-        } catch (error) {
-            console.log(`Connection to ${instance} failed.`);
         }
-    }
 
-    return res.status(500).json({ error: "ALL_NODES_OFFLINE" });
+        // Falls es einen Hauptartikel (Abstract) gibt
+        if (data.AbstractText) {
+            results.unshift({
+                title: data.Heading || q,
+                url: data.AbstractURL,
+                content: data.AbstractText
+            });
+        }
+
+        // Rückgabe an dein Frontend
+        return res.status(200).json({ results: results });
+
+    } catch (error) {
+        console.error("Backend Fetch Error:", error);
+        return res.status(500).json({ error: "CONNECTION_FAILED" });
+    }
 }
