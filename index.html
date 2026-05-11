@@ -50,7 +50,7 @@
         #results-area { width: 100%; margin-top: 40px; }
         .log-box { font-size: 11px; color: var(--neon); margin-bottom: 20px; border-left: 2px solid var(--neon); padding-left: 10px; line-height: 1.6; display: none; background: rgba(0,20,0,0.3); padding: 10px; }
 
-        /* Web / Video / News List */
+        /* Results Display */
         .result-item { margin-bottom: 25px; padding: 15px; border: 1px solid rgba(0, 255, 65, 0.1); background: rgba(0,10,0,0.5); transition: 0.2s; }
         .result-item:hover { border-color: var(--neon); transform: translateX(5px); }
         .result-item a { color: var(--neon); font-size: 18px; text-decoration: none; display: block; margin-bottom: 5px; font-weight: bold; }
@@ -61,8 +61,7 @@
         .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
         .image-card { background: #050505; border: 1px solid var(--neon-dim); position: relative; overflow: hidden; aspect-ratio: 1; transition: 0.3s; cursor: pointer; }
         .image-card:hover { border-color: var(--neon); transform: scale(1.03); z-index: 2; box-shadow: 0 0 20px rgba(0,255,65,0.3); }
-        .image-card img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
-        .image-card:hover img { filter: brightness(1.2); }
+        .image-card img { width: 100%; height: 100%; object-fit: cover; }
         .image-card .img-info { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: var(--neon); font-size: 9px; padding: 5px; transform: translateY(100%); transition: 0.3s; }
         .image-card:hover .img-info { transform: translateY(0); }
 
@@ -119,7 +118,15 @@
 </main>
 
 <script>
-    const INSTANCES = ["https://searx.work", "https://searx.be", "https://searx.priv.at"];
+    const PROXY_LIST = [
+        "https://api.codetabs.com/v1/proxy?quest=",
+        "https://api.allorigins.win/get?url="
+    ];
+    const SEARCH_INSTANCES = [
+        "https://searx.work",
+        "https://searx.be",
+        "https://searx.priv.at"
+    ];
     let currentCategory = "general";
 
     /* MATRIX BACKGROUND */
@@ -134,7 +141,6 @@
     }
     initMatrix();
     window.onresize = initMatrix;
-
     function drawMatrix() {
         ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
         ctx.fillRect(0, 0, w, h);
@@ -149,16 +155,14 @@
     }
     setInterval(drawMatrix, 50);
 
-    /* UI ELEMENTS */
+    /* UI EFFECTS */
     setInterval(() => { document.getElementById('utc-clock').innerText = new Date().toISOString().slice(11, 19) + " UTC"; }, 1000);
-
-    const slogans = ["UNCENSORED SEARCH.", "NO FILTERS. NO LOGS.", "ACCESS GRANTED.", "THE VOID AWAITS."];
+    const slogans = ["UNCENSORED SEARCH.", "NO FILTERS. NO LOGS.", "ACCESS THE VOID."];
     let slogIdx = 0;
     function typeSlogan() {
         const box = document.getElementById('tagline-box');
         const txt = slogans[slogIdx % slogans.length];
-        let i = 0;
-        box.innerHTML = "";
+        let i = 0; box.innerHTML = "";
         const timer = setInterval(() => {
             if (i < txt.length) { box.innerHTML += txt.charAt(i); i++; }
             else { clearInterval(timer); setTimeout(() => { slogIdx++; typeSlogan(); }, 3000); }
@@ -174,7 +178,7 @@
         };
     });
 
-    /* SEARCH ENGINE ENGINE */
+    /* SEARCH LOGIC */
     const form = document.getElementById('search-form');
     form.onsubmit = async (e) => {
         e.preventDefault();
@@ -187,48 +191,52 @@
         const logo = document.getElementById('main-logo');
 
         display.innerHTML = "";
-        log.innerHTML = "> INITIATING NEURAL BYPASS...<br>> DISABLE_SAFESEARCH: TRUE<br>> PROXY_LINK: ESTABLISHED<br>";
+        log.innerHTML = "> INITIATING NEURAL BYPASS...<br>> STATUS: UNFILTERED_ACCESS_ENABLED<br>";
         log.style.display = "block";
         loader.style.display = "block";
         logo.classList.add('glitch');
 
         try {
-            const results = await fetchWithProxy(q, currentCategory);
+            const results = await fetchWithFallbacks(q, currentCategory);
             renderData(results, currentCategory);
         } catch (err) {
-            log.innerHTML += "> CRITICAL_FAILURE: VOID_NODE_REJECTED_CONNECTION";
+            log.innerHTML += "> CRITICAL_FAILURE: ALL_NODES_BLOCKED<br>";
         } finally {
             loader.style.display = "none";
             logo.classList.remove('glitch');
         }
     };
 
-    async function fetchWithProxy(q, cat) {
-        // Wir probieren eine Instanz aus
-        const baseUrl = `${INSTANCES[0]}/search?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
-        
-        // Wir nutzen den AllOrigins Proxy als Fallback-Wrapper
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(baseUrl)}`;
-        
-        const response = await fetch(proxyUrl);
-        const wrapper = await response.json();
-        
-        // Versuche das JSON im String zu parsen
-        try {
-            const data = JSON.parse(wrapper.contents);
-            return data.results || [];
-        } catch(e) {
-            console.error("Parse Error", e);
-            return [];
+    async function fetchWithFallbacks(q, cat) {
+        for (let proxyBase of PROXY_LIST) {
+            for (let instance of SEARCH_INSTANCES) {
+                const target = `${instance}/search?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
+                const finalUrl = proxyBase + encodeURIComponent(target);
+                
+                try {
+                    const resp = await fetch(finalUrl);
+                    if (!resp.ok) continue;
+                    
+                    let data;
+                    if (proxyBase.includes("allorigins")) {
+                        const wrapped = await resp.json();
+                        data = JSON.parse(wrapped.contents);
+                    } else {
+                        data = await resp.json();
+                    }
+                    
+                    if (data && data.results) return data.results;
+                } catch(e) { continue; }
+            }
         }
+        throw new Error("FAILED_AFTER_ROTATION");
     }
 
     function renderData(results, cat) {
         const display = document.getElementById('display');
         const log = document.getElementById('log');
-        
-        if (results.length === 0) {
-            display.innerHTML = "<div class='result-item'><h3>[NULL_RESULT]</h3><p>No data fragments found in this sector. Try another node or query.</p></div>";
+        if (!results.length) {
+            display.innerHTML = "<div class='result-item'><h3>[NULL_RESULT]</h3><p>No fragments recovered from the void.</p></div>";
             return;
         }
 
@@ -242,7 +250,7 @@
                     html += `
                     <div class="image-card" onclick="window.open('${item.url}', '_blank')">
                         <img src="${img}" loading="lazy" onerror="this.parentElement.style.display='none'">
-                        <div class="img-info">${item.title.substring(0, 30)}...</div>
+                        <div class="img-info">${item.title}</div>
                     </div>`;
                 }
             });
@@ -255,7 +263,7 @@
                 <div class="result-item">
                     <a href="${item.url}" target="_blank">${item.title}</a>
                     <cite>${item.url}</cite>
-                    <p>${item.content || 'Data stream corrupted or empty.'}</p>
+                    <p>${item.content || 'Data stream corrupted.'}</p>
                 </div>`;
             });
             display.innerHTML = html;
