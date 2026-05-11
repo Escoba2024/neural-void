@@ -5,7 +5,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Query is required" });
     }
 
-    // Eine Liste verschiedener Instanzen. Wenn eine blockt, wird die nächste probiert.
     const instances = [
         "https://paulgo.io/search",
         "https://searx.be/search",
@@ -18,19 +17,25 @@ export default async function handler(req, res) {
         const targetUrl = `${instance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
 
         try {
-            const response = await fetch(targetUrl);
+            // Hier ist der Trick: Wir tarnen die Anfrage als echten Browser!
+            const response = await fetch(targetUrl, {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Referer": "https://www.google.com/"
+                }
+            });
             
-            // Wenn die Instanz erfolgreich antwortet (Status 200)
             if (response.ok) {
                 const data = await response.json();
-                return res.status(200).json(data); // Daten ans Frontend senden und abbrechen
+                return res.status(200).json(data);
             }
-            console.log(`${instance} responded with ${response.status}. Trying next...`);
+            console.log(`${instance} blocked the request with status: ${response.status}`);
         } catch (error) {
-            console.log(`Connection to ${instance} failed. Trying next...`);
+            console.log(`Connection to ${instance} failed.`);
         }
     }
 
-    // Wenn ALLE Instanzen in der Liste fehlgeschlagen sind
     return res.status(500).json({ error: "ALL_NODES_OFFLINE" });
 }
