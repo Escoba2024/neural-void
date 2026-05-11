@@ -231,7 +231,7 @@
         }
     };
 
-aasync function fetchResults(q, cat) {
+async function fetchResults(q, cat) {
     const activeInstance = "https://searx.work/search"; 
     const targetUrl = `${activeInstance}?q=${encodeURIComponent(q)}&categories=${cat}&format=json&safesearch=0&language=de-DE`;
     
