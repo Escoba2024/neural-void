@@ -5,50 +5,40 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Query is required" });
     }
 
-    // HIER KOMMT DEIN EIGENER API SCHLÜSSEL REIN:
-    const API_KEY = "DEIN_BRAVE_API_KEY"; 
+    // HIER DEINEN SERPER API KEY EINFÜGEN:
+    const API_KEY = "9a0e7ee3200d4d91a678cd39b09f4b1554c0376e"; 
 
     try {
-        let targetUrl = "";
-        let formattedResults = [];
-
-        // Wir rufen je nach Tab die richtige API auf
-        if (cat === "images") {
-            targetUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(q)}`;
-        } else {
-            targetUrl = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}`;
-        }
+        const type = cat === "images" ? "images" : "search";
+        const targetUrl = `https://google.serper.dev/${type}`;
 
         const response = await fetch(targetUrl, {
+            method: 'POST',
             headers: {
-                "Accept": "application/json",
-                "Accept-Encoding": "gzip",
-                "X-Subscription-Token": API_KEY // Dein digitaler Ausweis!
-            }
+                'X-API-KEY': API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ q: q, gl: "de", hl: "de" })
         });
 
         if (!response.ok) {
-            console.error(`Brave API Error: ${response.status}`);
-            return res.status(response.status).json({ error: "BRAVE_API_REJECTED" });
+            console.error(`Serper API Error: ${response.status}`);
+            return res.status(response.status).json({ error: "API_REJECTED" });
         }
 
         const data = await response.json();
+        let formattedResults = [];
 
-        // Daten so formatieren, wie dein Frontend sie erwartet
-        if (cat === "images") {
-            if (data.results) {
-                formattedResults = data.results.map(img => ({
-                    img_src: img.properties.url
-                }));
-            }
-        } else {
-            if (data.web && data.web.results) {
-                formattedResults = data.web.results.map(item => ({
-                    title: item.title,
-                    url: item.url,
-                    content: item.description
-                }));
-            }
+        if (cat === "images" && data.images) {
+            formattedResults = data.images.map(img => ({
+                img_src: img.imageUrl
+            }));
+        } else if (data.organic) {
+            formattedResults = data.organic.map(item => ({
+                title: item.title,
+                url: item.link,
+                content: item.snippet
+            }));
         }
 
         return res.status(200).json({ results: formattedResults });
